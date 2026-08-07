@@ -230,21 +230,22 @@ export function OutreachPanel({
     }
   }
 
-  async function handleSendToWaalaxy(lead: Lead): Promise<void> {
-    setWaalaxyStatus((prev) => ({ ...prev, [lead.id]: "sending" }));
-    try {
-      const res = await fetch("/api/waalaxy/send", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ lead }),
-      });
-      if (!res.ok) throw new Error("failed");
-      setWaalaxyStatus((prev) => ({ ...prev, [lead.id]: "queued" }));
-      if (lead.status === "new") onLeadContacted(lead.id);
-    } catch {
-      setWaalaxyStatus((prev) => ({ ...prev, [lead.id]: "error" }));
-    }
-  }
+  async function handleSendToWaalaxy(lead: Lead): void {
+  const rows = [
+    ["Nom", "Entreprise", "Rôle", "LinkedIn URL"],
+    [lead.name, lead.company, lead.role, lead.linkedInUrl],
+  ];
+  const csv = rows.map((r) => r.map((v) => `"${v.replace(/"/g, '""')}"`).join(",")).join("\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `waalaxy-${lead.name.replace(/\s+/g, "-").toLowerCase()}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+  setWaalaxyStatus((prev) => ({ ...prev, [lead.id]: "queued" }));
+  if (lead.status === "new") onLeadContacted(lead.id);
+}
 
   if (leads.length === 0) {
     return (
